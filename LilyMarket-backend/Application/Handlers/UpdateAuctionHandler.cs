@@ -36,18 +36,15 @@ public class UpdateAuctionHandler
         if (auction.Bids.Count > 0)
             throw new UnauthorizedOperationException("Cannot update auction with existing bids");
 
-        // Обновляем только то что прислали
-        // Используем рефлексию чтобы не писать кучу if
-        var type = typeof(Auction);
-
+        // Явное обновление свойств вместо рефлексии
         if (request.Title is not null)
-            type.GetProperty("Title")?.SetValue(auction, request.Title);
+            auction.UpdateTitle(request.Title);
 
         if (request.Description is not null)
-            type.GetProperty("Description")?.SetValue(auction, request.Description);
+            auction.UpdateDescription(request.Description);
 
         if (request.BuyNowPrice.HasValue)
-            type.GetProperty("BuyNowPrice")?.SetValue(auction, request.BuyNowPrice);
+            auction.UpdateBuyNowPrice(request.BuyNowPrice.Value);
 
         _auctionRepository.Update(auction);
         await _unitOfWork.SaveChangesAsync(ct);

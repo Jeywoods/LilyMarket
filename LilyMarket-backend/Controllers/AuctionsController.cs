@@ -29,12 +29,15 @@ public class AuctionsController : ControllerBase
         _cancelAuctionHandler = cancelAuctionHandler;
     }
 
+    //GET /api/auctions?page=1&pageSize=20 — список аукционов с пагинацией
+    //доступно всем, даже без авторизации
     [HttpGet]
     public async Task<IActionResult> GetAll(
         [FromQuery] int page = 1,
         [FromQuery] int pageSize = 20,
         CancellationToken ct = default)
     {
+        //ограничиваем максимум 50 на странице — защита от перегрузки
         if (pageSize > 50)
             pageSize = 50;
 
@@ -42,6 +45,8 @@ public class AuctionsController : ControllerBase
         return Ok(result);
     }
 
+    //GET /api/auctions/{id} — детальная информация об аукционе
+    //включает историю последних 5 ставок
     [HttpGet("{id:guid}")]
     public async Task<IActionResult> GetById(Guid id, CancellationToken ct)
     {
@@ -49,15 +54,21 @@ public class AuctionsController : ControllerBase
         return Ok(result);
     }
 
+    //POST /api/auctions — создать новый аукцион
+    //только для авторизованных пользователей
     [HttpPost]
     [Authorize]
     public async Task<IActionResult> Create([FromBody] CreateAuctionRequest request, CancellationToken ct)
     {
+        //достаём id пользователя из JWT-токена
         var userId = GetUserId();
         var result = await _createAuctionHandler.Handle(userId, request, ct);
+        //201 Created + ссылка на созданный аукцион
         return CreatedAtAction(nameof(GetById), new { id = result.Id }, result);
     }
 
+    //PUT /api/auctions/{id} — изменить аукцион
+    //только продавец и только до первой ставки
     [HttpPut("{id:guid}")]
     [Authorize]
     public async Task<IActionResult> Update(Guid id, [FromBody] UpdateAuctionRequest request, CancellationToken ct)
@@ -67,15 +78,20 @@ public class AuctionsController : ControllerBase
         return Ok(result);
     }
 
+    //DELETE /api/auctions/{id} — отменить аукцион
+    //только продавец и только до первой ставки
     [HttpDelete("{id:guid}")]
     [Authorize]
     public async Task<IActionResult> Cancel(Guid id, CancellationToken ct)
     {
         var userId = GetUserId();
         await _cancelAuctionHandler.Handle(id, userId, ct);
+        //204 No Content — успешно отменён
         return NoContent();
     }
 
+    //вытаскивает id пользователя из JWT-токена
+    //пробует два формата claim: стандартный "sub" и старый формат
     private Guid GetUserId()
     {
         var sub = User.FindFirst("sub")?.Value

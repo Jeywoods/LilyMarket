@@ -27,22 +27,23 @@ public class GetAuctionByIdHandler
 
         var seller = await _userRepository.GetByIdAsync(auction.SellerId, ct);
 
-        var recentBids = auction.Bids
+        // Правильный подход: foreach с await вместо async в Select
+        var recentBids = new List<BidSummaryDto>();
+        var orderedBids = auction.Bids
             .OrderByDescending(b => b.PlacedAt)
-            .Take(5)
-            .Select(async b =>
+            .Take(5);
+
+        foreach (var bid in orderedBids)
+        {
+            var bidder = await _userRepository.GetByIdAsync(bid.BidderId, ct);
+            recentBids.Add(new BidSummaryDto
             {
-                var bidder = await _userRepository.GetByIdAsync(b.BidderId, ct);
-                return new BidSummaryDto
-                {
-                    BidderId = b.BidderId,
-                    BidderName = bidder?.DisplayName ?? "Unknown",
-                    Amount = b.Amount,
-                    PlacedAt = b.PlacedAt
-                };
-            })
-            .Select(t => t.Result)
-            .ToList();
+                BidderId = bid.BidderId,
+                BidderName = bidder?.DisplayName ?? "Unknown",
+                Amount = bid.Amount,
+                PlacedAt = bid.PlacedAt
+            });
+        }
 
         return new AuctionDetailDto
         {

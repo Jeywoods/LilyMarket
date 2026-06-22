@@ -2,6 +2,6 @@
 
 public record AuctionEndedEvent(
     Guid AuctionId,
-    Guid? WinnerId,
-    decimal? WinningAmount
-    );
+    Guid WinnerId,
+    decimal WinningAmount
+);

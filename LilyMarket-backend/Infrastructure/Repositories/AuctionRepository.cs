@@ -16,11 +16,13 @@ public class AuctionRepository : IAuctionRepository
         _context = context;
     }
 
+    //простой поиск по id без ставок
     public async Task<Auction?> GetByIdAsync(Guid id, CancellationToken ct = default)
     {
         return await _context.Auctions.FindAsync(new object[] { id }, ct);
     }
 
+    //поиск по id вместе со списком ставок
     public async Task<Auction?> GetByIdWithBidsAsync(Guid id, CancellationToken ct = default)
     {
         return await _context.Auctions
@@ -28,6 +30,19 @@ public class AuctionRepository : IAuctionRepository
             .FirstOrDefaultAsync(a => a.Id == id, ct);
     }
 
+    //поиск с блокировкой строки — для конкурентных операций
+    //FOR UPDATE запрещает другим транзакциям читать или писать эту строку пока наша транзакция не завершится
+    //это ключевой метод для защиты от гонок при одновременных ставках
+    public async Task<Auction?> GetByIdWithBidsForUpdateAsync(Guid id, CancellationToken ct = default)
+    {
+        return await _context.Auctions
+            .FromSqlRaw("SELECT * FROM \"Auctions\" WHERE \"Id\" = {0} FOR UPDATE", id)
+            .Include(a => a.Bids)
+            .FirstOrDefaultAsync(ct);
+    }
+
+    //получить все активные аукционы у которых истекло время
+    //используется фоновым сервисом для автоматического завершения
     public async Task<IEnumerable<Auction>> GetExpiredActiveAuctionsAsync(DateTime now, CancellationToken ct = default)
     {
         return await _context.Auctions
@@ -36,11 +51,12 @@ public class AuctionRepository : IAuctionRepository
             .ToListAsync(ct);
     }
 
+    //пагинированный список аукционов для ленты
     public async Task<PagedResult<Auction>> GetPagedAsync(int page, int pageSize, CancellationToken ct = default)
     {
         var query = _context.Auctions
             .Include(a => a.Bids)
-            .OrderByDescending(a => a.StartedAt);
+            .OrderByDescending(a => a.StartedAt);  //сначала новые
 
         var totalCount = await query.CountAsync(ct);
 
