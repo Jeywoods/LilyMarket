@@ -18,19 +18,26 @@ public class AuctionExpiryService : BackgroundService
 
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {
+        //бесконечный цикл пока приложение работает
         while (!stoppingToken.IsCancellationRequested)
         {
             try
             {
                 using var scope = _scopeFactory.CreateScope();
+
+                //получаем EndExpiredAuctionsHandler который ищет истёкшие аукционы
+                //определяет победителей и рассылает уведомления
                 var handler = scope.ServiceProvider.GetRequiredService<EndExpiredAuctionsHandler>();
                 await handler.Handle(stoppingToken);
             }
             catch (Exception ex)
             {
+                //логируем ошибку, сервис продолжает работать
+                //через 30 секунд попробует снова
                 _logger.LogError(ex, "Error ending expired auctions");
             }
 
+            //ждём 30 секунд до следующей проверки
             await Task.Delay(TimeSpan.FromSeconds(30), stoppingToken);
         }
     }

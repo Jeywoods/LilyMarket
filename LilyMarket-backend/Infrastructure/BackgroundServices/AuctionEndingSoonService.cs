@@ -18,6 +18,7 @@ public class AuctionEndingSoonService : BackgroundService
 
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {
+        //крутимся бесконечно пока приложение не остановят
         while (!stoppingToken.IsCancellationRequested)
         {
             try
@@ -28,10 +29,15 @@ public class AuctionEndingSoonService : BackgroundService
                 var dateTimeProvider = scope.ServiceProvider.GetRequiredService<IDateTimeProvider>();
 
                 var now = dateTimeProvider.UtcNow;
+
+                //ищем активные аукционы которые закончатся в ближайшие 6 минут
                 var endingSoon = await repo.GetExpiredActiveAuctionsAsync(now.AddMinutes(6), stoppingToken);
 
+                //из них выбираем те что закончатся через 4-6 минут
+                //это окно в 2 минуты чтобы точно не пропустить и не задвоить уведомление
                 foreach (var auction in endingSoon.Where(a => a.EndTime >= now.AddMinutes(4) && a.EndTime <= now.AddMinutes(6)))
                 {
+                    //отправляем всем кто смотрит аукцион: "аукцион закончится через 5 минут"
                     await notificationService.NotifyAuctionEndingSoonAsync(auction.Id);
                 }
             }
@@ -40,6 +46,7 @@ public class AuctionEndingSoonService : BackgroundService
                 _logger.LogError(ex, "Error checking ending soon auctions");
             }
 
+            //ждём минуту перед следующей проверкой
             await Task.Delay(TimeSpan.FromSeconds(60), stoppingToken);
         }
     }

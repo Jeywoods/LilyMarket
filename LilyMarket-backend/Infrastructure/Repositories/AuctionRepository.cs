@@ -30,8 +30,6 @@ public class AuctionRepository : IAuctionRepository
             .FirstOrDefaultAsync(a => a.Id == id, ct);
     }
 
-    //поиск с блокировкой строки — для конкурентных операций
-    //FOR UPDATE запрещает другим транзакциям читать или писать эту строку пока наша транзакция не завершится
     //это ключевой метод для защиты от гонок при одновременных ставках
     public async Task<Auction?> GetByIdWithBidsForUpdateAsync(Guid id, CancellationToken ct = default)
     {
