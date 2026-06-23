@@ -16,7 +16,7 @@ public class Auction
     public Guid SellerId { get; private set; }           //id продавца, создавшего аукцион
     public string Title { get; private set; }             //название лота
     public string Description { get; private set; }       //описание товара
-    public string Category { get; private set; }          //категория: Tech, Books, Furniture и т.д.
+    public string Category { get; private set; }          //категория: Tech, Books, Furniture
     public string Condition { get; private set; }         //состояние: New, Like New, Good
     public string CoverImageUrl { get; private set; }     //ссылка на фото товара
     public decimal StartingPrice { get; private set; }    //начальная цена, от неё считается первая ставка
