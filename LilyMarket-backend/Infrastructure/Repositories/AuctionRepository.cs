@@ -30,7 +30,7 @@ public class AuctionRepository : IAuctionRepository
             .FirstOrDefaultAsync(a => a.Id == id, ct);
     }
 
-    //это ключевой метод для защиты от гонок при одновременных ставках
+    //метод для защиты от гонок при одновременных ставках
     public async Task<Auction?> GetByIdWithBidsForUpdateAsync(Guid id, CancellationToken ct = default)
     {
         return await _context.Auctions
@@ -40,7 +40,6 @@ public class AuctionRepository : IAuctionRepository
     }
 
     //получить все активные аукционы у которых истекло время
-    //используется фоновым сервисом для автоматического завершения
     public async Task<IEnumerable<Auction>> GetExpiredActiveAuctionsAsync(DateTime now, CancellationToken ct = default)
     {
         return await _context.Auctions

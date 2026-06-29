@@ -58,7 +58,6 @@ public class ConcurrentBidTests
             sellerId, "Test", "Desc", "Tech", "Good", "url",
             new Money(100), new Money(10), null, now.AddHours(1), now);
 
-        //мок репозитория возвращает этот аукцион
         _auctionRepoMock.Setup(x => x.GetByIdWithBidsForUpdateAsync(auction.Id, default))
             .ReturnsAsync(auction);
 
@@ -81,7 +80,7 @@ public class ConcurrentBidTests
             }
             catch
             {
-                //ловим BidTooLowException — ставка не прошла потому что другая уже подняла цену
+                //ставка не прошла потому что другая уже подняла цену
                 results.Add(false);
             }
         });
@@ -221,7 +220,7 @@ public class ConcurrentBidTests
     {
         //ситуация: текущая ставка 500, шаг 200
         //два человека одновременно ставят по 700
-        //кто первый забрал блокировку — того ставка проходит
+        //кто первый того ставка проходит
         //второй ждёт и видит что цена уже 700, а 700 < 700 + 200 — отклоняется
 
         var now = DateTime.UtcNow;

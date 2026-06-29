@@ -22,13 +22,17 @@ public class CancelAuctionHandler
 
     public async Task Handle(Guid auctionId, Guid userId, CancellationToken ct = default)
     {
+        //достаём аукцион вместе со ставками, нужно проверить есть ли ставки
         var auction = await _auctionRepository.GetByIdWithBidsAsync(auctionId, ct);
 
+        //аукцион не найден — 404
         if (auction is null)
             throw new AuctionNotFoundException(auctionId);
 
+        //проверка на то что нет ставок у лота
         auction.Cancel(userId);
 
+        //помечаем аукцион как изменённый и сохраняем в БД
         _auctionRepository.Update(auction);
         await _unitOfWork.SaveChangesAsync(ct);
 

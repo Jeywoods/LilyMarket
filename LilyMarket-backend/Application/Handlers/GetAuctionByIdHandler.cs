@@ -20,31 +20,36 @@ public class GetAuctionByIdHandler
 
     public async Task<AuctionDetailDto> Handle(Guid id, CancellationToken ct = default)
     {
+        //достаём аукцион из базы вместе со всеми ставками
         var auction = await _auctionRepository.GetByIdWithBidsAsync(id, ct);
 
+        //не найден — 404
         if (auction is null)
             throw new AuctionNotFoundException(id);
 
+        //находим продавца чтобы показать его имя
         var seller = await _userRepository.GetByIdAsync(auction.SellerId, ct);
 
-        // Правильный подход: foreach с await вместо async в Select
+        //собираем 5 последних ставок для истории
         var recentBids = new List<BidSummaryDto>();
         var orderedBids = auction.Bids
-            .OrderByDescending(b => b.PlacedAt)
-            .Take(5);
+            .OrderByDescending(b => b.PlacedAt)  //сортируем от новых к старым
+            .Take(5);                            //берём только 5 последних
 
+        //для каждой ставки находим имя участника
         foreach (var bid in orderedBids)
         {
             var bidder = await _userRepository.GetByIdAsync(bid.BidderId, ct);
             recentBids.Add(new BidSummaryDto
             {
                 BidderId = bid.BidderId,
-                BidderName = bidder?.DisplayName ?? "Unknown",
-                Amount = bid.Amount,
-                PlacedAt = bid.PlacedAt
+                BidderName = bidder?.DisplayName ?? "Unknown",  //имя или "Unknown" если пользователь удалён
+                Amount = bid.Amount,           //сумма ставки
+                PlacedAt = bid.PlacedAt        //когда сделана
             });
         }
 
+        //собираем полный DTO для ответа клиенту
         return new AuctionDetailDto
         {
             Id = auction.Id,
@@ -55,12 +60,12 @@ public class GetAuctionByIdHandler
             StartingPrice = auction.StartingPrice,
             MinimumIncrement = auction.MinimumIncrement,
             BuyNowPrice = auction.BuyNowPrice,
-            CurrentHighestBid = auction.CurrentHighestBid,
-            CurrentHighestBidderId = auction.CurrentHighestBidderId,
+            CurrentHighestBid = auction.CurrentHighestBid,           //текущая цена (null если нет ставок)
+            CurrentHighestBidderId = auction.CurrentHighestBidderId, //id лидера (null если нет ставок)
             StartedAt = auction.StartedAt,
             EndTime = auction.EndTime,
-            Status = auction.Status.ToString(),
-            RecentBids = recentBids
+            Status = auction.Status.ToString(),  //Active, Ended, Sold, Canceled
+            RecentBids = recentBids              //последние 5 ставок с именами участников
         };
     }
 }

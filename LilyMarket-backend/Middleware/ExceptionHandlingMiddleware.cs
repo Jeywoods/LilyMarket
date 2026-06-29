@@ -1,4 +1,5 @@
 ﻿using System.Text.Json;
+using FluentValidation;
 using LilyMarket.Domain.Exceptions;
 
 namespace LilyMarket.Middleware;
@@ -19,6 +20,27 @@ public class ExceptionHandlingMiddleware
         try
         {
             await _next(context);
+        }
+        catch (ValidationException ex)
+        {
+            _logger.LogWarning("Validation failed: {Message}", ex.Message);
+
+            context.Response.StatusCode = 400;
+            context.Response.ContentType = "application/problem+json";
+
+            var errors = ex.Errors.Select(e => new { field = e.PropertyName, message = e.ErrorMessage });
+
+            var problem = new
+            {
+                type = "https://lilymarket.ru/errors/validation_failed",
+                title = "Validation failed",
+                status = 400,
+                code = "VALIDATION_FAILED",
+                errors = errors,
+                timestamp = DateTime.UtcNow
+            };
+
+            await context.Response.WriteAsync(JsonSerializer.Serialize(problem));
         }
         catch (BidValidationException ex)
         {

@@ -44,13 +44,13 @@ public class PlaceBidHandler
         //сюда запишем реальную наивысшую ставку после сохранения
         decimal newHighestBid = 0;
 
-        //оборачиваем всё в транзакцию — чтобы две одновременные ставки не сломали состояние
+        //оборачиваем всё в транзакцию чтобы две одновременные ставки не сломали состояние
         await _unitOfWork.ExecuteInTransactionAsync(async () =>
         {
-            //если другая транзакция уже забрала блокировку — эта будет ждать
+            //если другая транзакция уже забрала блокировку эта будет ждать
             var auction = await _auctionRepository.GetByIdWithBidsForUpdateAsync(auctionId, ct);
 
-            //аукцион не найден — кидаем 404
+            //аукцион не найден кидаем 404
             if (auction is null)
                 throw new AuctionNotFoundException(auctionId);
 
@@ -80,7 +80,7 @@ public class PlaceBidHandler
                 request.Amount, auctionId, bidderId, auction.CurrentHighestBid);
         }, ct);
 
-        //транзакция прошла успешно — возвращаем результат
+        //транзакция прошла успешно возвращаем результат
         return new BidResultDto
         {
             Success = true,
@@ -97,7 +97,7 @@ public class PlaceBidHandler
             switch (domainEvent)
             {
                 case Domain.Events.BidPlacedEvent bidPlaced:
-                    //новая ставка — уведомляем всех кто смотрит этот аукцион
+                    //новая ставка: уведомляем всех кто смотрит этот аукцион
                     await _notificationService.NotifyBidPlacedAsync(
                         bidPlaced.AuctionId,
                         new BidPlacedNotification
@@ -110,7 +110,7 @@ public class PlaceBidHandler
                     break;
 
                 case Domain.Events.BidOutbidEvent outbid:
-                    //перебили чью-то ставку — находим его предыдущую сумму
+                    //перебили чью-то ставку: находим его предыдущую сумму
                     var previousBidAmount = auction.Bids
                         .Where(b => b.BidderId == outbid.PreviousHighestBidderId)
                         .OrderByDescending(b => b.Amount)
